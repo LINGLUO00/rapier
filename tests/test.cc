@@ -1,22 +1,24 @@
 #include "../src/log.h"
+#include "../src/util.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>
 
 using namespace rapier;
 
-int main() {
-    /* ==== 1. 枚举转字符串测试 ==== */
-    assert(std::strcmp(LogLevel::ToString(LogLevel::DEBUG), "DEBUG") == 0);
-    assert(std::strcmp(LogLevel::ToString(LogLevel::INFO ), "INFO" ) == 0);
-    assert(std::strcmp(LogLevel::ToString(LogLevel::WARN ), "WARN" ) == 0);
-    assert(std::strcmp(LogLevel::ToString(LogLevel::ERROR), "ERROR") == 0);
-    assert(std::strcmp(LogLevel::ToString(LogLevel::FATAL), "FATAL") == 0);
-
-    /* ==== 2. Logger 基本属性测试 ==== */
-    auto logger = std::make_shared<Logger>("unit_logger");
-    assert(logger->getName() == "unit_logger");
-
-    std::cout << "All rapier basic unit tests passed.\n";
-    return 0;
+int main(int argc, char** argv) {
+  rapier::Logger::ptr logger(new rapier::Logger);
+  logger->addAppender(rapier::LogAppender::ptr(new rapier::StdoutLogAppender));
+  //rapier::LogEvent::ptr event(new rapier::LogEvent(__FILE__, __LINE__, 0,rapier::GetThreadId() ,rapier::GetFiberId(),time(0)));
+  //logger->log(rapier::LogLevel::DEBUG, event);
+  rapier::FileLogAppender::ptr file_appender(new rapier::FileLogAppender("./log.txt"));
+  rapier::LogFormatter::ptr fmt(new rapier::LogFormatter("%d%T%p%T%m%n"));
+  file_appender->setFormatter(fmt);
+  file_appender->setLevel(rapier::LogLevel::ERROR);
+  logger->addAppender(file_appender);
+  RAPIER_LOG_INFO(logger)<<"test macro";
+  RAPIER_LOG_FMT_ERROR(logger,"test macro fmt error %s","hahaha");
+  auto i = rapier::LoggerMgr::GetInstance()->getLogger("xx");
+  RAPIER_LOG_INFO(i)<<"xxx";
+  return 0;
 }

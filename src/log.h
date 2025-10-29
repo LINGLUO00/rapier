@@ -10,7 +10,38 @@
 #include<vector>
 #include<iostream>
 #include<tuple>
-# endif
+#include<cstdarg>
+#include<map>
+#include"singleton.h"
+#include "util.h"
+
+#define RAPIER_LOG_LEVEL(logger,level) \
+  if(logger->getLevel() <= level) \
+    rapier::LogEventWrap(rapier::LogEvent::ptr(new rapier::LogEvent(logger, level,\
+            __FILE__, __LINE__, 0, rapier::GetThreadId(),\
+            rapier::GetFiberId(),time(0)))).getSS()
+#define RAPIER_LOG_DEBUG(logger) RAPIER_LOG_LEVEL(logger,rapier::LogLevel::DEBUG)
+#define RAPIER_LOG_UNKNOW(logger) RAPIER_LOG_LEVEL(logger,rapier::LogLevel::UNKNOW)
+#define RAPIER_LOG_INFO(logger) RAPIER_LOG_LEVEL(logger,rapier::LogLevel::INFO)
+#define RAPIER_LOG_WARN(logger) RAPIER_LOG_LEVEL(logger,rapier::LogLevel::WARN)
+#define RAPIER_LOG_ERROR(logger) RAPIER_LOG_LEVEL(logger,rapier::LogLevel::ERROR)
+#define RAPIER_LOG_FATAL(logger) RAPIER_LOG_LEVEL(logger,rapier::LogLevel::FATAL)
+
+#define RAPIER_LOG_FMT_LEVEL(logger,level,fmt,...) \
+  if(logger->getLevel() <= level) \
+    rapier::LogEventWrap(rapier::LogEvent::ptr(new rapier::LogEvent(logger, level,\
+            __FILE__, __LINE__, 0, rapier::GetThreadId(),\
+            rapier::GetFiberId(),time(0)))).getEvent()->format(fmt,__VA_ARGS__)
+
+#define RAPIER_LOG_FMT_DEBUG(logger,fmt,...) RAPIER_LOG_FMT_LEVEL(logger,rapier::LogLevel::DEBUG,fmt,__VA_ARGS__)
+#define RAPIER_LOG_FMT_UNKNOW(logger,fmt,...) RAPIER_LOG_FMT_LEVEL(logger,rapier::LogLevel::UNKNOW,fmt,__VA_ARGS__)
+#define RAPIER_LOG_FMT_INFO(logger,fmt,...) RAPIER_LOG_FMT_LEVEL(logger,rapier::LogLevel::INFO,fmt,__VA_ARGS__)
+#define RAPIER_LOG_FMT_WARN(logger,fmt,...) RAPIER_LOG_FMT_LEVEL(logger,rapier::LogLevel::WARN,fmt,__VA_ARGS__)
+#define RAPIER_LOG_FMT_ERROR(logger,fmt,...) RAPIER_LOG_FMT_LEVEL(logger,rapier::LogLevel::ERROR,fmt,__VA_ARGS__)
+#define RAPIER_LOG_FMT_FATAL(logger,fmt,...) RAPIER_LOG_FMT_LEVEL(logger,rapier::LogLevel::FATAL,fmt,__VA_ARGS__)
+
+#define RAPIER_LOG_ROOT() rapier::LoggerMgr::GetInstance()->getRoot()
+
 namespace rapier {
 class Logger;
 //日志级别
@@ -31,22 +62,41 @@ public:
 class LogEvent{
 public:
   typedef std::shared_ptr<LogEvent> ptr;
-  LogEvent();
+  LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level, const char* file, int32_t line, uint32_t elapse
+      , uint32_t thread_id, uint32_t fiber_id, uint64_t time);
+  ~LogEvent();
   const char* getFile() const{return _file;}
   int32_t getLine() const {return _line;}
   uint32_t getElapse() const{return _elapse;}
   uint32_t getThreadId() const {return _threadId;}
   uint32_t getFiberId() const {return _fiberId;}
   uint64_t getTime() const {return _time;}
-  const std::string& getContent() const{return _content;}
+  std::string getContent() const{return _ss.str();}
+  std::stringstream& getSS() {return _ss;}
+  LogLevel::Level getLevel() const {return _level;}
+  std::shared_ptr<Logger> getLogger() const {return _logger;}
+  void format(const char* fmt, ...);
+  void format(const char* fmt, va_list all);
 private:
   int32_t _line = 0; //行号
   const char* _file = nullptr; //文件名
   uint64_t _time = 0; //时间戳
-  std::string _content; //文本内容
+  std::stringstream _ss; //文本内容
   uint32_t _elapse = 0;  //程序启动到现在的毫秒数
   uint32_t _threadId = 0; //线程id
   uint32_t _fiberId = 0;                          //协程id
+  std::shared_ptr<Logger> _logger;
+  LogLevel::Level _level;
+};
+
+class LogEventWrap{
+public:
+  LogEventWrap(LogEvent::ptr event);
+  ~LogEventWrap();
+  std::stringstream& getSS();
+  LogEvent::ptr getEvent()const {return _event;}
+private:
+  LogEvent::ptr _event;
 };
 
 //日志格式器
@@ -74,8 +124,9 @@ public:
   virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level,LogEvent::ptr) = 0;//纯虚函数，让子类必须实现这个方法。
   void setFormatter(LogFormatter::ptr val) {_formatter = val;}
   LogFormatter::ptr getFormatter() const {return _formatter;}
+  void setLevel(LogLevel::Level level){_level=level;}
 protected://需要给子类用到
-  LogLevel::Level _level;
+  LogLevel::Level _level=LogLevel::DEBUG;
   LogFormatter::ptr _formatter;
 };
 
@@ -119,4 +170,19 @@ private:
     std::string _filename;
     std::ofstream _filestream;
 };
+class LoggerManager{
+public:
+  LoggerManager();
+  Logger::ptr getLogger(const std::string& name);
+  void init();
+  Logger::ptr getRoot() const {return _root;}
+private:
+  std::map<std::string, Logger::ptr> _loggers;
+  Logger::ptr _root;
+};
+typedef rapier::Singleton<LoggerManager> LoggerMgr;
+
+
+
 }
+# endif

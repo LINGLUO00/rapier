@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/hyl/Project/rapier/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

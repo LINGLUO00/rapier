@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -rdynamic -O3 -g -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wl,--dependency-file=CMakeFiles/rapier.dir/link.d -shared -Wl,-soname,librapier.so -o /home/hyl/Project/rapier/lib/librapier.so CMakeFiles/rapier.dir/src/log.cc.o CMakeFiles/rapier.dir/src/util.cc.o CMakeFiles/rapier.dir/src/config.cc.o
